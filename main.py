@@ -11,55 +11,48 @@ logging.basicConfig(filename="DB_playground_with_checking_email.log",
 
 class confparser():
     
-    def __init__(self,extension='cfg'):
+    def __init__(self,extension='cfg',intended_block='#'):
         logging.info("instance initialize")
         self.conflist = []
-        self.conf_re_group=[]
+        self.conf_re_group = []
+        self.blocki = intended_block
         self.allfiles = os.listdir()
         for f in self.allfiles:
             _, e = os.path.splitext(f)
             if extension in e:
                 self.conflist.append(f)
         logging.info("in the current path {}, found the following conf files".format(os.getcwd(),self.conflist))
-        
+
     def import_conf(self):
         for conf in self.conflist:
             with open("testconf.cfg")  as f:
                 self.fullconf = f.readlines()
-                self.fullconf = deque(self.fullconf)
-                while len(self.fullconf) > 2:
-                    fc = self.fullconf.popleft()
-                    if "#" in fc:
-                        section_list= self.get_section(self.fullconf)
-                        self.conf_re_group.append(section_list)     
-                    else: 
-                        pass
+                #init a list for capturing the content between two intended blocks
+                
+                s = []
+                for cl in self.fullconf:
+                    
+                    if self.blocki not in cl:
+                        s.append(cl)
+                    else:
+                        self.conf_re_group.append(s)
+                        s = []
 
                 logging.info("regroup the configuration files in based on intend, details as following")
                 logging.info(self.conf_re_group)
             self.start_parse()
     
-    def get_section(self,fullconf):
-        s =[]
-        while len(fullconf) > 2:
-            a = fullconf.popleft()
-            if "#" not in a:
-                s.append(a)
-            else:
-                fullconf.appendleft(a)
-                return s
     def start_parse(self):
-        while len(self.conf_re_group) > 1:
-            c = self.conf_re_group.pop(0)
+        for c in self.conf_re_group:
             if "system" in c[0]:
                 lh=re.search(r'sysname (\S+)',c)
                 l_hostname = lh.group(1)
             if "interface" in c[0]:
-                self.parse_interface(c)
+                self.parse_interface(c,l_hostname)
             if "router" in c[0]:
-                    self.parse_routing(c)
+                    self.parse_routing(c,l_hostname)
             else:
-                self.parse_system(c)
+                self.parse_system(c,l_hostname)
 
     def parse_system(self, c):
         pass
@@ -67,13 +60,5 @@ class confparser():
     def parse_routing(self,c):
         pass
 
-    def parse_interface(self,c):
-        logging.info("found interface info, start analyze")
-        
-            
-
-
-parser = confparser()
-parser.import_conf() 
-
-
+    def parse_interface(self,c,l_hostname):
+        for conf in c:
